@@ -1,0 +1,192 @@
+---
+- name: Waiting for mytonctrl to be provisioned
+  wait_for:
+    path: /tmp/ton-work.mytonctrl.provision
+    state: present
+    timeout: 3600
+
+- name: Check if /var/ton-work/db directory exists
+  stat:
+    path: /var/ton-work/db
+  register: db_dir
+
+- name: Check if /tmp/ton-work.dump.provision exists
+  stat:
+    path: /tmp/ton-work.dump.provision
+  register: provision_dump
+
+- name: Check if /tmp/ton-work.dump.provision_started exists
+  stat:
+    path: /tmp/ton-work.dump.provision_started
+  register: provision_dump_started
+
+- name: Apply dump
+  block:
+    - name: Create lock file
+      file:
+        path: /tmp/ton-work.dump.provision_started
+        state: touch
+
+    - name: Stop 'validator'
+      systemd:
+        name: validator
+        state: stopped
+      ignore_errors: yes
+
+    - name: Stop 'mytoncore'
+      systemd:
+        name: mytoncore
+        state: stopped
+      ignore_errors: yes
+
+    - name: Set latest tar name and dump file path
+      set_fact:
+        backup_datetime: "{{ '%s.%s.%s-%s:%s:%s' | format(ansible_date_time.day, ansible_date_time.month, ansible_date_time.year[2:], ansible_date_time.hour, ansible_date_time.minute, ansible_date_time.second) }}"
+
+    - name: Move old /var/ton-work/db to backup directory
+      command: mv /var/ton-work/db /var/ton-work/db_backup_{{ backup_datetime }}
+      when: db_dir.stat.exists
+      ignore_errors: yes
+
+    - name: Check if backup_name file exists
+      stat:
+        path: /tmp/ton-work.dump.backup_name
+      register: backup_name_file
+
+    - name: Save backup_name to file for future runs
+      copy:
+        content: "db_backup_{{ backup_datetime }}"
+        dest: /tmp/ton-work.dump.backup_name
+      when: not backup_name_file.stat.exists
+
+    - name: Create /var/ton-work/db directory
+      file:
+        path: /var/ton-work/db
+        state: directory
+        mode: '0755'
+
+    - name: Get latest dump file name
+      uri:
+        url: "{{ mytonctrl.dump_file }}"
+        return_content: yes
+      register: tar_name
+
+    - name: Set latest tar name and dump file path
+      set_fact:
+        latest_tar_name: "{{ tar_name.content | trim }}"
+        dump_file: "{{ ansible_env.HOME }}/{{ tar_name.content | trim }}.lz"
+
+    - name: Check if dump file exists
+      stat:
+        path: "{{ dump_file }}"
+        get_checksum: no
+      register: dump_file_stat
+
+    - name: Download dump file if not present
+      shell: |
+        screen -dmS aria2c_session bash -c 'aria2c -x 16 https://dump.ton.org/dumps/{{ latest_tar_name }}.lz; echo $? > /tmp/ton-work.provision-dump.exit_code'
+      args:
+        chdir: "{{ ansible_env.HOME }}"
+      when: not dump_file_stat.stat.exists
+
+    - name: Wait for download completion
+      wait_for:
+        path: /tmp/ton-work.provision-dump.exit_code
+        state: present
+        timeout: 3600
+
+    - name: Check if local SHA256 file exists
+      stat:
+        path: "{{ dump_file }}.sha256"
+      register: sha_file_stat
+
+    - name: Compute local SHA256 hash if not cached
+      command: sha256sum "{{ dump_file }}"
+      register: computed_local_hash
+      changed_when: false
+      when: not sha_file_stat.stat.exists
+
+    - name: Write computed SHA256 hash to file for caching
+      copy:
+        content: "{{ computed_local_hash.stdout.split()[0] }}"
+        dest: "{{ dump_file }}.sha256"
+      when: not sha_file_stat.stat.exists
+
+    - name: Read local SHA256 hash from cached file
+      slurp:
+        src: "{{ dump_file }}.sha256"
+      register: stored_local_hash
+      when: sha_file_stat.stat.exists
+
+    - name: Set local hash fact from cached file
+      set_fact:
+        local_hash_val: "{{ stored_local_hash.content | b64decode | trim }}"
+      when: sha_file_stat.stat.exists
+
+    - name: Set local hash fact from computed hash
+      set_fact:
+        local_hash_val: "{{ computed_local_hash.stdout.split()[0] }}"
+      when: not sha_file_stat.stat.exists
+
+    - name: Fetch expected SHA256 hash
+      uri:
+        url: "https://dump.ton.org/dumps/{{ latest_tar_name }}.sha256sum.txt"
+        return_content: yes
+      register: remote_hash
+
+    - name: Compare local and remote SHA256 hashes
+      assert:
+        that:
+          - local_hash_val == remote_hash.content.split()[0]
+        fail_msg: "SHA256 hash mismatch: local and remote hashes do not match."
+        success_msg: "SHA256 hash verified successfully."
+
+    - name: Check if extraction lock file exists
+      stat:
+        path: /var/dump_extract_lock
+      register: extract_lock
+
+    - name: Start extraction in screen session
+      shell: |
+        > /var/dump_extract_lock; screen -dmS extract_session bash -c 'plzip -d -c {{ dump_file }} | tar -xvf - -C /var/ton-work/db; echo $? > /tmp/ton-work.dump-extract.exit_code; rm /var/dump_extract_lock; rm /var/dump_extract_lock; rm /tmp/ton-work.provision-dump.exit_code; rm /tmp/ton-work.dump.provision_started; > /tmp/ton-work.dump.provision'
+      when: not extract_lock.stat.exists
+
+    - name: Wait for extraction exit code file
+      wait_for:
+        path: /tmp/ton-work.dump-extract.exit_code
+        state: present
+        timeout: 3600
+
+    - name: Read extraction exit code
+      slurp:
+        src: /tmp/ton-work.dump-extract.exit_code
+      register: extract_exit_code_file
+
+    - name: Set extraction exit code fact
+      set_fact:
+        extract_exit_code_int: "{{ extract_exit_code_file.content | b64decode | string | int }}"
+
+    - name: Check exit code extract
+      assert:
+        that:
+          - extract_exit_code_int == '0'
+        fail_msg: "Exit code = {{ extract_exit_code_int }}"
+        success_msg: "Exit code = 0"
+
+    - name: Remove extraction exit code file
+      file:
+        path: /tmp/ton-work.dump-extract.exit_code
+        state: absent
+  when: not provision_dump.stat.exists and not provision_dump_started.stat.exists or (re_provisioning | default(false))
+
+- name: Wait for dump provision
+  wait_for:
+    path: /tmp/ton-work.dump.provision
+    state: present
+    timeout: 3600
+
+- name: Chown for /var/ton-work/keyring
+  shell: |
+    chown -R validator:validator /var/ton-work 
+    chown -R {{ default_user }}:{{ default_user }} /var/ton-work/keys
+    chmod 755 -R /var/ton-work

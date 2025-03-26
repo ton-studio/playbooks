@@ -1,0 +1,16 @@
+---
+- name: Disable root login with password in sshd_config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin prohibit-password'
+    state: present
+  notify: Restart sshd
+
+- name: Change sshd port to 2022 in sshd_config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?Port'
+    line: 'Port 2022'
+    state: present
+  notify: Restart sshd

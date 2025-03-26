@@ -1,0 +1,154 @@
+---
+- name: Check if /usr/bin/mytonctrl exists
+  stat:
+    path: /usr/bin/mytonctrl
+  register: mytonctrl_bin
+
+- name: Wait for installation exit code file
+  wait_for:
+    path: /tmp/ton-work.mytonctrl.provision
+    state: present
+    timeout: 3600
+
+- name: Find backup files
+  become_user: "{{ default_user }}"
+  find:
+    paths: "{{ ansible_env.HOME }}"
+    patterns: "mytonctrl_backup_*"
+    file_type: file
+  register: backup_files
+
+- name: Archive specified files and directories preserving attributes
+  archive:
+    path:
+      - /var/ton-work/db/config.json
+      - /var/ton-work/db/keyring
+      - /var/ton-work/keys
+      - "{{ ansible_env.HOME }}/.local/share/mytoncore"
+      - /usr/local/bin/mytoncore
+    dest: /tmp/mytoncore_backup_{{ ansible_date_time.epoch }}.tar.gz
+    format: gz
+  become: yes
+
+- name: Stop 'validator' service if running
+  systemd:
+    name: validator
+    state: stopped
+  ignore_errors: yes
+
+- name: Stop 'mytoncore' service if running
+  systemd:
+    name: mytoncore
+    state: stopped
+  ignore_errors: yes
+
+- name: Build backup list with timestamps
+  set_fact:
+    backup_list: "{{ backup_list | default([]) + [ {'name': item.path | basename, 'timestamp': (item.path | basename | regex_replace('^.*_(\\d+)\\.tar\\.gz$', '\\1') | int) } ] }}"
+  loop: "{{ backup_files.files }}"
+
+- name: Restore from provisioned restic backup
+  block:
+    - name: Set backup_name to the latest backup file
+      set_fact:
+        backup_name: "{{ (backup_list | sort(attribute='timestamp', reverse=True))[0].name }}"
+
+    - name: Restore backup {{ backup_name }} using interactive prompt
+      become_user: "{{ default_user }}"
+      expect:
+        command: "bash /usr/bin/mytonctrl"
+        responses:
+          "MyTonCtrl": "restore_backup {{ backup_name }}"
+          "Proceed": "y"
+        timeout: 600
+      register: restore_backup_output
+      when: backup_name is defined
+
+    - name: Create /usr/local/bin/mytoncore backup
+      become_user: root
+      ignore_errors: true
+      copy:
+        remote_src: yes
+        src: "/usr/local/bin/mytoncore"
+        dest: "/usr/local/bin/mytoncore_backup"
+
+    - name: Copy mytoncore from {{ default_user }} to /usr/local/bin
+      copy:
+        remote_src: yes
+        src: "{{ default_user_home_cmd.stdout }}/.local/share/mytoncore"
+        dest: "/usr/local/bin/mytoncore"
+
+    - name: Print stdout from restore command
+      debug:
+        msg: "Restore command stdout: {{ restore_backup_output.stdout }}"
+      when: backup_name is defined
+  when: backup_files.matched > 0 and (backup_list is defined and backup_list | length > 0)
+
+- name: Check if backup_name file exists
+  stat:
+    path: /tmp/ton-work.dump.backup_name
+  register: backup_name_file
+
+- name: Restore from init state
+  block:
+    - name: Read dump backup name
+      slurp:
+        src: /tmp/ton-work.dump.backup_name
+      register: dump_backup_name
+
+    - name: Set backup_name from file if it exists
+      set_fact:
+        dump_backup_name_str: "{{ dump_backup_name.content | b64decode | string | trim }}"
+      when: backup_name_file.stat.exists
+
+    - name: Copy config.json from {{ dump_backup_name_str }} to /var/ton-work/db/config.json
+      copy:
+        remote_src: yes
+        src: "/var/ton-work/{{ dump_backup_name_str }}/config.json"
+        dest: "/var/ton-work/db/config.json"
+
+    - name: Copy keyring from {{ dump_backup_name_str }} to /var/ton-work/db/keyring
+      copy:
+        remote_src: yes
+        src: "/var/ton-work/{{ dump_backup_name_str }}/keyring/"
+        dest: "/var/ton-work/db/keyring/"
+
+  when: backup_name_file.stat.exists and backup_list is undefined
+
+- name: Chown for /var/ton-work/keyring
+  become_user: root
+  shell: |
+    chown -R validator:validator /var/ton-work 
+    chown -R {{ default_user }}:{{ default_user }} /var/ton-work/keys
+    chmod 755 -R /var/ton-work
+
+- name: Start 'validator' service
+  systemd:
+    name: validator
+    state: started
+
+- name: Start 'mytoncore' service
+  systemd:
+    name: mytoncore
+    state: started
+
+- name: Enable single-nominator
+  become: yes
+  become_user: "{{ default_user }}"
+  shell: echo 'enable_mode single-nominator' | mytonctrl
+  register: mytonctrl_output_single_nominator
+  failed_when: "'enable_mode - \u001b[32mOK\u001b[0m' not in mytonctrl_output_single_nominator.stdout"
+  when: mytonctrl_bin.stat.exists and backup_name is undefined
+
+- name: Provisioning mytonctrl
+  become: yes
+  become_user: "{{ default_user }}"
+  shell: |
+    echo 'enable_mode alert-bot' | mytonctrl
+    echo 'set ChatId {{ alert_bot_chat_id }}' | mytonctrl
+    echo 'set BotToken {{ alert_bot_token }}' | mytonctrl
+    echo 'set stake {{ stake_size }}' | mytonctrl
+    echo 'set subscribe_tg_channel true' | mytonctrl
+    echo 'set auto_backup true' | mytonctrl
+  register: mytonctrl_config_output
+  when: backup_name is undefined

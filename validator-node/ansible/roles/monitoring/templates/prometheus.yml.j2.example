@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          - "localhost:9090"
+
+  - job_name: "ton-validators-metrics"
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - "ton-validators-metrics:8000"
+
+  - job_name: "validator-production-mytonmetrics"
+    scrape_interval: 1m
+    scheme: https
+    metrics_path: /mytonmetrics/metrics
+    static_configs:
+      - targets:
+          - "val1.host.tld"
+
+  - job_name: "validator-production-node-metrics"
+    scrape_interval: 1m
+    scheme: https
+    metrics_path: /node/metrics
+    static_configs:
+      - targets:
+          - "val1.host.tld"

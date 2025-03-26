@@ -1,0 +1,29 @@
+---
+- name: Chown for /var/ton-work/keyring
+  shell: |
+    chown -R validator:validator /var/ton-work 
+    chown -R {{ default_user }}:{{ default_user }} /var/ton-work/keys
+    chmod 755 -R /var/ton-work
+
+- name: Create backup
+  become: yes
+  become_user: "{{ default_user }}"
+  when: backup_name_file.stat.exists and backup_list is undefined
+  shell: |
+    echo 'create_backup' | mytonctrl
+
+- name: Check if restic executable exists
+  command: which restic
+  register: restic_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Backup "mytonctrl_backup_*" files using restic
+  shell: >
+    restic backup {{ default_user_home_cmd.stdout }}/mytonctrl_backup_*
+    --repo /root/mtc_backup
+    --tag "mytonctrl_backup_{{ inventory_hostname }}_{{ ansible_date_time.epoch }}"
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  when: restic_check.rc == 0
+  ignore_errors: true

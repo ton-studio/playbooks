@@ -1,0 +1,18 @@
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: Telegram MainNet
+    receivers:
+      - uid: eebu2v4t2b11cd
+        type: telegram
+        settings:
+          parse_mode: Markdown
+          bottoken: $BOT_TOKEN
+          chatid: | 
+            ${CHAT_ID}
+          disable_notification: false
+          disable_web_page_preview: false
+          protect_content: false
+          message: '{{ template "telegram.message" . }}'
+        disableResolveMessage: false
+        template: telegram

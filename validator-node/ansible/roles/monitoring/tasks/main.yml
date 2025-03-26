@@ -1,0 +1,5 @@
+---
+- include_tasks: ../common/_init.yml
+- include_tasks: ../common/iptables.yml
+- include_tasks: ../common/ssh.yml
+- include_tasks: docker.yml

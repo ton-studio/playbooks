@@ -1,0 +1,17 @@
+---
+- include_tasks: ../common/_init.yml
+- include_tasks: apt.yml
+- include_tasks: ufw.yml
+- include_tasks: restic.yml
+- include_tasks: run-restore.yml
+- include_tasks: ../common/iptables.yml
+- include_tasks: ../common/ssh.yml
+- include_tasks: mytonctrl.yml
+- include_tasks: dump.yml
+- include_tasks: mytonctrl-restore.yml
+- include_tasks: iptables_mytonctrl.yml
+- include_tasks: docker.yml
+- include_tasks: mytonctrl-exporter.yml
+- include_tasks: run-backup.yml
+
+

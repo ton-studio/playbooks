@@ -1,0 +1,408 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: default
+    folder: default
+    interval: 1m
+    rules:
+      - uid: dedqiy40wmdxca
+        title: Validator efficiency
+        condition: C
+        data:
+          - refId: Efficiency
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              adhocFilters: [ ]
+              datasource:
+                type: prometheus
+                uid: PBFA97CFB590B2093
+              editorMode: code
+              expr: validator_efficiency{network="mainnet"}
+              format: time_series
+              instant: true
+              interval: ""
+              intervalMs: 15000
+              legendFormat: '{{validator}}'
+              maxDataPoints: 43200
+              range: false
+              refId: Efficiency
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 95
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: [ ]
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: Efficiency
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        dashboardUid: validator-balance-heatmap
+        panelId: 7
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          __dashboardUid__: validator-balance-heatmap
+          __panelId__: "7"
+        isPaused: false
+        notification_settings:
+          receiver: Telegram MainNet
+      - uid: aee0wxr8hoxdsa
+        title: Validator participation status
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              adhocFilters: [ ]
+              datasource:
+                type: prometheus
+                uid: PBFA97CFB590B2093
+              editorMode: code
+              expr: validator_participation_status{network="mainnet"}
+              format: time_series
+              instant: true
+              interval: ""
+              intervalMs: 15000
+              legendFormat: '{{validator}}'
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                      - 1
+                    type: outside_range
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: [ ]
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        dashboardUid: validator-balance-heatmap
+        panelId: 5
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          __dashboardUid__: validator-balance-heatmap
+          __panelId__: "5"
+        isPaused: false
+        notification_settings:
+          receiver: Telegram MainNet
+      - uid: cedpx7dkjvl6oe
+        title: Validator is not in participant list
+        condition: C
+        data:
+          - refId: Validator index
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              adhocFilters: [ ]
+              datasource:
+                type: prometheus
+                uid: PBFA97CFB590B2093
+              editorMode: code
+              expr: myton_validator_index
+              instant: true
+              interval: ""
+              intervalMs: 15000
+              legendFormat: ""
+              maxDataPoints: 43200
+              range: false
+              refId: Validator index
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: [ ]
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: Validator index
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+          - refId: A
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [ ]
+                  reducer:
+                    params: [ ]
+                    type: avg
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: Validator index
+              hide: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: A
+              type: reduce
+        dashboardUid: bebntr6ha6y2oa
+        panelId: 7
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          __dashboardUid__: bebntr6ha6y2oa
+          __panelId__: "7"
+          summary: 'Validator index'
+        isPaused: false
+        notification_settings:
+          receiver: Telegram MainNet
+      - uid: eee1qq1f788hsc
+        title: Out of sync
+        condition: node lag invalid
+        data:
+          - refId: node_lag
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              adhocFilters: [ ]
+              datasource:
+                type: prometheus
+                uid: PBFA97CFB590B2093
+              disableTextWrap: false
+              editorMode: builder
+              expr: myton_local_validator_out_of_sync{node_adnl="3D1CD8FDFCB3354D225C7200342BC37509CAF54185DF690438A37D5B6025D6C3"}
+              fullMetaSearch: false
+              includeNullMetadata: true
+              instant: true
+              interval: ""
+              intervalMs: 15000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: node_lag
+              useBackend: false
+          - refId: node lag invalid
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 600
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: [ ]
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: node_lag
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: node lag invalid
+              type: threshold
+        dashboardUid: bebntr6ha6y2oa2
+        panelId: 21
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          __dashboardUid__: bebntr6ha6y2oa2
+          __panelId__: "21"
+        labels: { }
+        isPaused: false
+        notification_settings:
+          receiver: Telegram MainNet
+      - uid: fee1r6xgnfocgc
+        title: Validator Index below 0 in mytonctrl! Validation is stopped
+        condition: validator index is invalid
+        data:
+          - refId: validator index
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              adhocFilters: [ ]
+              datasource:
+                type: prometheus
+                uid: PBFA97CFB590B2093
+              disableTextWrap: false
+              editorMode: builder
+              expr: myton_validator_index
+              fullMetaSearch: false
+              includeNullMetadata: true
+              instant: true
+              interval: ""
+              intervalMs: 15000
+              legendFormat: ""
+              maxDataPoints: 43200
+              range: false
+              refId: validator index
+              useBackend: false
+          - refId: validator index is invalid
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: [ ]
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: validator index
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: validator index is invalid
+              type: threshold
+        dashboardUid: bebntr6ha6y2oa2
+        panelId: 7
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          __dashboardUid__: bebntr6ha6y2oa2
+          __panelId__: "7"
+        labels: { }
+        isPaused: false
+        notification_settings:
+          receiver: Telegram MainNet
+      - uid: dee1ra4gmnbi8c
+        title: 'Wallet Balance is too low'
+        condition: balance is invalid
+        data:
+          - refId: balance
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              adhocFilters: [ ]
+              datasource:
+                type: prometheus
+                uid: PBFA97CFB590B2093
+              disableTextWrap: false
+              editorMode: builder
+              expr: myton_local_validator_wallet_balance
+              fullMetaSearch: false
+              includeNullMetadata: true
+              instant: true
+              interval: ""
+              intervalMs: 15000
+              legendFormat: ""
+              maxDataPoints: 43200
+              range: false
+              refId: balance
+              useBackend: false
+          - refId: balance is invalid
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 20
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: [ ]
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: balance
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: balance is invalid
+              type: threshold
+        dashboardUid: bebntr6ha6y2oa2
+        panelId: 8
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          __dashboardUid__: bebntr6ha6y2oa2
+          __panelId__: "8"
+        labels: { }
+        isPaused: false
+        notification_settings:
+          receiver: Telegram MainNet

@@ -1,0 +1,9 @@
+- name: Restore from archive preserving file permissions and owners
+  unarchive:
+    src: /tmp/mytoncore_backup{{ ansible_date_time.epoch }}.tar.gz
+    dest: /
+    remote_src: yes
+    extra_opts:
+      - --same-owner
+      - --preserve-permissions
+  become: yes

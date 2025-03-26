@@ -1,0 +1,45 @@
+- include_tasks: ../common/docker.yml
+
+- name: Create Docker volume for Prometheus
+  command: docker volume create prometheus_data
+  args:
+    creates: /var/lib/docker/volumes/prometheus_data
+
+- name: Create Docker volume for Grafana
+  command: docker volume create grafana_data
+  args:
+    creates: /var/lib/docker/volumes/grafana_data
+
+- name: Deploy Grafana config file
+  become_user: "{{ default_user }}"
+  template:
+    src: docker-env.j2
+    dest: "{{ default_user_home_cmd.stdout }}/monitoring-panel/.env"
+    owner: "{{ default_user }}"
+    group: "{{ default_user }}"
+    mode: '0644'
+
+- name: Deploy Prometheus config file
+  become_user: "{{ default_user }}"
+  become: true
+  template:
+    src: prometheus.yml.j2
+    dest: "{{ default_user_home_cmd.stdout }}/monitoring-panel/prometheus/prometheus.yml"
+    owner: "{{ default_user }}"
+    group: "{{ default_user }}"
+    mode: '0644'
+
+- name: Deploy multisig Dockerfile
+  become_user: "{{ default_user }}"
+  template:
+    src: multisig-dockerfile.yml.j2
+    dest: "{{ default_user_home_cmd.stdout }}/monitoring-panel/multisig/Dockerfile"
+    owner: "{{ default_user }}"
+    group: "{{ default_user }}"
+    mode: '0644'
+
+- name: Bring up Docker Compose services for monitoring
+  become_user: "{{ default_user }}"
+  command: sudo docker compose up -d --force-recreate
+  args:
+    chdir: "{{ default_user_home_cmd.stdout }}/monitoring-panel"

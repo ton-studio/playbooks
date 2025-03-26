@@ -1,0 +1,7 @@
+- include_tasks: ../common/docker.yml
+
+- name: Bring up Docker Compose services for monitoring
+  command: sudo docker compose up -d --force-recreate
+  become_user: "{{ default_user }}"
+  args:
+    chdir: "{{ default_user_home_cmd.stdout }}/monitoring-exporters/docker"

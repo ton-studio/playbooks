@@ -1,0 +1,5 @@
+creation_rules:
+  - path_regex: .*(.enc)?.ya?ml$
+    age: age1qykgm9h4myvqha9lm43uk69nxj2vkwvd56xynrz8tgvlynw8passvpwmlx
+  - path_regex: .*(.enc)?.j2$
+    age: age1qykgm9h4myvqha9lm43uk69nxj2vkwvd56xynrz8tgvlynw8passvpwmlx

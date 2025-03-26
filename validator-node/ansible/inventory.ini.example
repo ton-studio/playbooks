@@ -1,0 +1,5 @@
+[validator-production]
+validator-example-node-1
+
+[monitoring]
+validators-monitoring

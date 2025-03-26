@@ -1,0 +1,24 @@
+---
+- name: Update apt cache for restic installation
+  apt:
+    update_cache: yes
+
+- name: Install restic package
+  apt:
+    name: restic
+    state: present
+
+- name: Set restic password fact
+  set_fact:
+    restic_password: "{{ restic_password }}"
+
+- name: Check if /root/mtc_backup exists
+  stat:
+    path: /root/mtc_backup
+  register: restic_repo
+
+- name: Initialize restic repository
+  command: restic init --repo /root/mtc_backup
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  when: not restic_repo.stat.exists

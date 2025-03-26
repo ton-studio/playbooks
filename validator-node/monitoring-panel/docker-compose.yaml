@@ -1,0 +1,87 @@
+services:
+  multisig:
+    build: ./multisig
+    container_name: multisig
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
+  ton-validators-metrics:
+    build: ./ton-validators-metrics
+    container_name: ton-validators-metrics
+    environment:
+      - NETWORK=${NETWORK}
+      - VALIDATORS=${VALIDATORS}
+      - PORT=8000
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    env_file: .env
+    image: grafana/grafana:latest
+    container_name: grafana
+    user: "472"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_SERVER_ROOT_URL=http://${GRAFANA_HOST}/
+      - BOT_TOKEN=${BOT_TOKEN}
+      - CHAT_ID=${CHAT_ID}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/provisioning/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    network_mode: host
+    pid: "host"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($|/)'
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/cloudflare_allow.conf:/etc/nginx/cloudflare_allow.conf:ro
+      - ./nginx/.htpasswd:/etc/nginx/.htpasswd:ro
+    depends_on:
+      - prometheus
+      - grafana
+      - multisig
+      - ton-validators-metrics
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+    external: true
+  grafana_data:
+    external: true

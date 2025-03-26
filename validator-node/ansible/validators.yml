@@ -1,0 +1,5 @@
+- hosts: validator-production
+  become: yes
+  strategy: debug
+  roles:
+    - validator

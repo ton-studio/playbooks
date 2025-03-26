@@ -1,0 +1,6 @@
+[submodule "validator-node/monitoring-panel/multisig"]
+	path = validator-node/monitoring-panel/multisig
+	url = https://github.com/ton-blockchain/multisig.git
+[submodule "validator-node/monitoring-panel/ton-validators-metrics"]
+	path = validator-node/monitoring-panel/ton-validators-metrics
+	url = https://github.com/the-ton-tech/ton-validators-metrics.git

@@ -1,0 +1,14 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install common packages
+  apt:
+    name:
+      - iptables-persistent
+      - fail2ban
+      - aria2
+      - mc
+      - plzip
+    state: present

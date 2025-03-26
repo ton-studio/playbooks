@@ -1,0 +1,26 @@
+---
+- name: Check if /root/mtc_backup directory exists
+  stat:
+    path: /root/mtc_backup
+  register: mtc_backup_dir
+
+- name: Retrieve restic snapshots from /root/mtc_backup
+  command: restic snapshots --repo /root/mtc_backup --json
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  register: restic_snapshots
+  when: mtc_backup_dir.stat.exists
+  changed_when: false
+
+- name: Run restore if backups are missing locally and snapshot with backup exists in the repository
+  shell: >
+    restic restore {{ restic_snapshot }}
+    --repo /root/mtc_backup
+    --target /
+    --include "mytonctrl_backup_*"
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  when: mtc_backup_dir.stat.exists and
+    (restic_snapshots is defined and
+    (restic_snapshots.stdout | from_json
+    | selectattr('tags', 'search', 'mytonctrl_backup_') | list | length) > 0)

@@ -1,0 +1,6 @@
+restic_password: test
+luks_password: test
+re_provisioning: false
+restic_snapshot: latest
+host: val1.host.tld
+alert_bot_token: token

@@ -1,0 +1,16 @@
+apiVersion: 1
+
+templates:
+  - orgId: 1
+    name: telegram
+    template: |
+      {{ define "telegram.message" }}
+      {{ if gt (len .Alerts) 1 }}*Alerts ({{ len .Alerts }}):*{{ end }}
+      {{ range .Alerts }}
+      {{ if eq .Status "resolved" }}✅ {{ else if eq .Status "firing" }}🔥 {{ else }}{{ .Status }} {{ end }}{{ if .Labels.instance }}{{ .Labels.instance }}: {{ end }}{{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}
+      {{ .StartsAt | date "02.01 15:04:05 MST" }}{{ if eq .Status "resolved" }} – {{ .EndsAt | date "02.01 15:04:05 MST" }}{{ end }}
+      {{ range $key, $value := .Labels }}
+      - {{ $key }}: {{ $value }}{{ end }}
+      [Source]({{ .GeneratorURL }}){{ if .Annotations.__dashboardUid__ }} | [Dashboard]({{ .ExternalURL }}/d/{{ .Annotations.__dashboardUid__ }}?orgId={{ .Annotations.__orgId__ }}){{ end }}{{ if .Annotations.__panelId__ }} | [Panel]({{ .ExternalURL }}/d/{{ .Annotations.__dashboardUid__ }}?orgId={{ .Annotations.__orgId__ }}&viewPanel={{ .Annotations.__panelId__ }}){{ end }}{{ if .Annotations.Silence }} | [Silence]({{ .Annotations.Silence }}){{ end }}
+      {{ end }}
+      {{ end }}

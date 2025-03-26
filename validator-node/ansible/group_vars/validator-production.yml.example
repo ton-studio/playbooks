@@ -1,0 +1,16 @@
+default_user: user
+
+crypt_name: "mtc"
+luks_container: "/root/mtc.img"
+container_size: "2G"
+mount_point: "/mnt/mtc"
+
+encrypt_paths:
+  - "/var/ton-work/db/keyring/"
+  - "/var/ton-work/keys/"
+  - "/usr/local/bin/mytoncore/wallets/"
+
+stake_size: "null"
+
+alert_bot_chat_id: -1000000000
+

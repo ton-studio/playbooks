@@ -1,0 +1,6 @@
+- name: "Get default_user home directory"
+  register: "default_user_home_cmd"
+  become: true
+  become_user: "{{ default_user }}"
+  shell: >
+    getent passwd {{ default_user }} | awk -F: '{ print $6 }'

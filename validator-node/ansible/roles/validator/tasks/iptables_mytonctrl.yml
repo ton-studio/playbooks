@@ -1,0 +1,55 @@
+---
+- name: Check if config.json exists for dynamic port
+  stat:
+    path: /var/ton-work/db/config.json
+  register: config_json_file
+
+- name: Read config.json for dynamic port
+  slurp:
+    src: /var/ton-work/db/config.json
+  register: config_json
+  when: config_json_file.stat.exists
+
+- name: Print stdout from config
+  debug:
+    msg: "Restore command stdout: {{ config_json.content  }}"
+  when: config_json_file.stat.exists
+
+- name: Set dynamic_port fact from config.json
+  set_fact:
+    dynamic_port: "{{ (config_json.content | b64decode | from_json).addrs[0].port }}"
+  when: config_json_file.stat.exists
+
+- name: Accept UDP traffic on dynamic port on INPUT chain
+  iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: "{{ dynamic_port }}"
+    jump: ACCEPT
+    state: present
+  when: config_json_file.stat.exists
+
+- name: Log dropped packets on INPUT chain
+  iptables:
+    chain: INPUT
+    jump: LOG
+    log_prefix: "INPUT:DROP:"
+    log_level: 6
+    state: present
+
+- name: Log dropped packets on FORWARD chain
+  iptables:
+    chain: FORWARD
+    jump: LOG
+    log_prefix: "FORWARD:DROP:"
+    log_level: 6
+    state: present
+
+- name: Set default policy of INPUT chain to DROP
+  iptables:
+    chain: INPUT
+    policy: DROP
+    state: present
+
+- name: Save iptables rules
+  shell: iptables-save > /etc/iptables/rules.v4

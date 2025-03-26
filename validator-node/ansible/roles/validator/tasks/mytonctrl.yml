@@ -1,0 +1,122 @@
+---
+- name: Check if /usr/bin/mytonctrl exists
+  stat:
+    path: /usr/bin/mytonctrl
+  register: mytonctrl_bin
+
+- name: Check if installation lock file exists
+  stat:
+    path: /tmp/ton-work.mytonctrl-install.lock
+  register: install_lock
+
+- name: Check if /tmp/ton-work.mytonctrl.provision exists
+  stat:
+    path: /tmp/ton-work.mytonctrl.provision
+  register: provision_mytonctrl
+
+- name: Set up mytonctrl
+  block:
+
+    - name: Ensure ~/mytonctrl directory exists
+      file:
+        path: "{{ ansible_env.HOME }}/mytonctrl"
+        state: directory
+        mode: '0755'
+
+    - name: Check if install.sh exists in ~/mytonctrl
+      stat:
+        path: "{{ ansible_env.HOME }}/mytonctrl/install.sh"
+      register: install_sh
+
+
+    - name: Download install.sh to ~/mytonctrl
+      get_url:
+        url: https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
+        dest: "/root/mytonctrl/install.sh"
+        mode: '0755'
+      when: not install_sh.stat.exists
+
+    - name: Ensure /root/mytonctrl/install.sh is executable
+      file:
+        path: /root/mytonctrl/install.sh
+        mode: '0755'
+      become: yes
+
+    - name: Check if install lock file exists
+      stat:
+        path: /tmp/ton-work.mytonctrl-install.lock
+      register: install_lock
+
+    - name: Check if install exit code file exists
+      stat:
+        path: /tmp/ton-work.mytonctrl-install.exit_code
+      register: install_exit_code
+
+    - name: Run install.sh with validator mode in screen session with lock
+      become: yes
+      become_user: "{{ default_user }}"
+      shell: |
+        screen -dmS install_session bash -c 'touch /tmp/ton-work.mytonctrl-install.lock; sudo bash /root/mytonctrl/install.sh -m {{ mytonctrl.mode }} -n {{ mytonctrl.network }}; echo $? > /tmp/ton-work.mytonctrl-install.exit_code; rm /tmp/ton-work.mytonctrl-install.lock'
+      args:
+        creates: /usr/bin/mytonctrl
+      when: not install_lock.stat.exists and not install_exit_code.stat.exists
+  when: not mytonctrl_bin.stat.exists and not provision_mytonctrl.stat.exists
+
+- name: Wait for installation exit code file
+  wait_for:
+    path: /tmp/ton-work.mytonctrl-install.exit_code
+    state: present
+    timeout: 3600
+
+- name: Read exit code from file
+  slurp:
+    src: "/tmp/ton-work.mytonctrl-install.exit_code"
+  register: exit_code_file
+
+- name: Convert exit code to integer
+  set_fact:
+    mytonctrl_install_exit_code_int: "{{ exit_code_file.content | b64decode | string | int }}"
+
+- name: Assert exit code is 0
+  assert:
+    that:
+      - mytonctrl_install_exit_code_int == '0'
+    fail_msg: "Exit code = {{ mytonctrl_install_exit_code_int }}"
+    success_msg: "Exit code = 0"
+
+- name: Archive specified files and directories preserving attributes
+  archive:
+    
+    path:
+      - /var/ton-work/db/config.json
+      - /var/ton-work/db/keyring
+      - /var/ton-work/keys
+      - "{{ ansible_env.HOME }}/.local/share/mytoncore"
+      - /usr/local/bin/mytoncore
+    dest: "{{ ansible_env.HOME }}/init_backup{{ ansible_date_time.epoch }}.tar.gz"
+    format: gz
+  become: yes
+
+- name: Run mytonctrl for creating config file
+  become: yes
+  become_user: "{{ default_user }}"
+  shell: echo 'exit' | mytonctrl
+
+- name: Archive specified files and directories preserving attributes
+  archive:
+    
+    path:
+      - /var/ton-work/db/config.json
+      - /var/ton-work/db/keyring
+      - /var/ton-work/keys
+      - "{{ ansible_env.HOME }}/.local/share/mytoncore"
+      - /usr/local/bin/mytoncore
+    dest: "{{ ansible_env.HOME }}/first_run_backup{{ ansible_date_time.epoch }}.tar.gz"
+    format: gz
+  become: yes
+
+- name: Create file /tmp/ton-work.mytonctrl.provision
+  file:
+    path: /tmp/ton-work.mytonctrl.provision
+    state: touch
+    mode: '0644'

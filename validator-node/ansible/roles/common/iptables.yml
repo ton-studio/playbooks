@@ -1,0 +1,84 @@
+---
+- name: Accept loopback traffic on INPUT chain
+  iptables:
+    chain: INPUT
+    in_interface: lo
+    jump: ACCEPT
+    state: present
+
+- name: Accept traffic from 172.17.0.1/24 on INPUT chain
+  iptables:
+    chain: INPUT
+    source: "172.17.0.1/24"
+    jump: ACCEPT
+    state: present
+
+- name: Accept traffic from 172.18.0.1/24 on INPUT chain
+  iptables:
+    chain: INPUT
+    source: "172.18.0.1/24"
+    jump: ACCEPT
+    state: present
+
+- name: Accept traffic from 172.17.0.1/24 on FORWARD chain
+  iptables:
+    chain: FORWARD
+    source: "172.17.0.1/24"
+    jump: ACCEPT
+    state: present
+
+- name: Accept traffic from 172.18.0.1/24 on FORWARD chain
+  iptables:
+    chain: FORWARD
+    source: "172.18.0.1/24"
+    jump: ACCEPT
+    state: present
+
+- name: Accept TCP traffic on port 9100 on FORWARD chain
+  iptables:
+    chain: FORWARD
+    protocol: tcp
+    destination_port: 9100
+    jump: ACCEPT
+    state: present
+
+- name: Accept TCP traffic on port 9140 on FORWARD chain
+  iptables:
+    chain: FORWARD
+    protocol: tcp
+    destination_port: 9140
+    jump: ACCEPT
+    state: present
+
+- name: Accept TCP traffic on port 80 on INPUT chain
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 80
+    jump: ACCEPT
+    state: present
+
+- name: Accept TCP traffic on port 22 on INPUT chain
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 22
+    jump: ACCEPT
+    state: present
+
+- name: Accept TCP traffic on port 2022 on INPUT chain
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 2022
+    jump: ACCEPT
+    state: present
+
+- name: Accept established and related TCP traffic on INPUT chain
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    jump: ACCEPT
+    match: state
+    ctstate: ESTABLISHED,RELATED
+    state: present

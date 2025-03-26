@@ -1,0 +1,14 @@
+[Unit]
+Description=MyTonCtrl Exporter Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/user/monitoring-exporters/mytonctrl-exporter/metrics.py
+Restart=always
+RestartSec=5
+User=user
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

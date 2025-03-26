@@ -1,0 +1,13 @@
+---
+- name: Disable and stop ufw service
+  service:
+    name: ufw
+    state: stopped
+    enabled: no
+  ignore_errors: yes
+
+- name: Remove ufw package
+  apt:
+    name: ufw
+    state: absent
+  ignore_errors: yes

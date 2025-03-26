@@ -1,0 +1,36 @@
+- name: Check if mytonctrl-exporter service is already installed
+  stat:
+    path: /etc/systemd/system/mytonctrl-exporter.service
+  register: exporter_service
+  become: yes
+
+- name: Install mytonctrl-exporter if not installed
+  block:
+    - name: Install requirements for mytonctrl-exporter
+      pip:
+        requirements: "{{ default_user_home_cmd.stdout }}/monitoring-exporters/mytonctrl-exporter/requirements.txt"
+
+    - name: Copy mytonctrl-exporter service file to /etc/systemd/system using cp
+      shell: >
+        sudo cp {{ default_user_home_cmd.stdout }}/monitoring-exporters/mytonctrl-exporter/systemd/mytonctrl-exporter.service /etc/systemd/system/mytonctrl-exporter.service &&
+        sudo chmod 0644 /etc/systemd/system/mytonctrl-exporter.service
+      become: yes
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+      become: yes
+
+    - name: Enable mytonctrl-exporter service
+      systemd:
+        name: mytonctrl-exporter
+        enabled: yes
+      become: yes
+
+    - name: Start mytonctrl-exporter service
+      systemd:
+        name: mytonctrl-exporter
+        state: started
+      become: yes
+
+  when: not exporter_service.stat.exists

@@ -1,0 +1,15 @@
+[submodule "monitoring/multisig"]
+	path = monitoring/multisig
+	url = git@github.com:ton-studio/multisig.git
+[submodule "monitoring/ton-validators-metrics"]
+	path = monitoring/ton-validators-metrics
+	url = https://github.com/the-ton-tech/ton-validators-metrics.git
+[submodule "monitoring/--force"]
+	path = monitoring/--force
+	url = git@github.com:ton-studio/multisig.git
+[submodule "monitoring-panel/ton-validators-metrics"]
+	path = monitoring-panel/ton-validators-metrics
+	url = https://github.com/the-ton-tech/ton-validators-metrics.git
+[submodule "monitoring-panel/multisig"]
+	path = monitoring-panel/multisig
+	url = https://github.com/ton-blockchain/multisig.git
